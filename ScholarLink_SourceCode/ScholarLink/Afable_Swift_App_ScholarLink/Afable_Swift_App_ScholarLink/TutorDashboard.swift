@@ -85,7 +85,15 @@ struct TutorDashboardView: View {
                     }
                 }
             }
+            .refreshable {
+                await sessionManager.loadSessions()
+            }
             .navigationBarHidden(true)
+        }
+        .onAppear {
+            Task {
+                await sessionManager.loadSessions()
+            }
         }
     }
     

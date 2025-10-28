@@ -14,15 +14,36 @@ struct AllTutors: View {
     
     @State private var selectedSubject: String = "All"
     @State private var searchText: String = ""
+    @State private var sortBy: SortOption = .name
+    
+    enum SortOption: String, CaseIterable {
+        case name = "Name"
+        case rateAsc = "Rate: Low to High"
+        case rateDesc = "Rate: High to Low"
+        case experience = "Experience"
+    }
     
     var filteredTutors: [User] {
-        tutors.filter { tutor in
+        let filtered = tutors.filter { tutor in
             (selectedSubject == "All" || tutor.selectedSubjects.contains(selectedSubject)) &&
             (searchText.isEmpty ||
              tutor.firstName.localizedCaseInsensitiveContains(searchText) ||
              tutor.lastName.localizedCaseInsensitiveContains(searchText) ||
              tutor.selectedSubjects.contains(where: { $0.localizedCaseInsensitiveContains(searchText) })
             )
+        }
+        
+        return filtered.sorted { tutor1, tutor2 in
+            switch sortBy {
+            case .name:
+                return tutor1.firstName < tutor2.firstName
+            case .rateAsc:
+                return (tutor1.hourlyRate ?? 0) < (tutor2.hourlyRate ?? 0)
+            case .rateDesc:
+                return (tutor1.hourlyRate ?? 0) > (tutor2.hourlyRate ?? 0)
+            case .experience:
+                return (tutor1.yearsExperience ?? 0) > (tutor2.yearsExperience ?? 0)
+            }
         }
     }
     

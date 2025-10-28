@@ -23,6 +23,9 @@ struct Session: Identifiable, Codable {
     let message: String
     let hourlyRate: Double
     var status: String
+    var isCompleted: Bool
+    var rating: Int?
+    var review: String?
     let createdAt: Date
     let updatedAt: Date
     
@@ -40,6 +43,9 @@ struct Session: Identifiable, Codable {
         case message
         case hourlyRate = "hourly_rate"
         case status
+        case isCompleted = "is_completed"
+        case rating
+        case review
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
@@ -198,5 +204,53 @@ class SessionManager: ObservableObject {
     
     func getAcceptedSessionsForStudent(email: String) -> [Session] {
         return getSessionsForStudent(email: email).filter { $0.isAccepted }
+    }
+    
+    func markSessionAsComplete(_ session: Session) async {
+        struct UpdateComplete: Encodable {
+            let is_completed: Bool
+        }
+        
+        do {
+            try await supabase
+                .from("sessions")
+                .update(UpdateComplete(is_completed: true))
+                .eq("id", value: session.id.uuidString)
+                .execute()
+            
+            await MainActor.run {
+                if let index = self.sessions.firstIndex(where: { $0.id == session.id }) {
+                    self.sessions[index].isCompleted = true
+                }
+            }
+        } catch {
+            print("Failed to mark session as complete: \(error)")
+        }
+    }
+    
+    func rateSession(_ session: Session, rating: Int, review: String) async {
+        struct UpdateRating: Encodable {
+            let rating: Int
+            let review: String
+            let is_completed: Bool
+        }
+        
+        do {
+            try await supabase
+                .from("sessions")
+                .update(UpdateRating(rating: rating, review: review, is_completed: true))
+                .eq("id", value: session.id.uuidString)
+                .execute()
+            
+            await MainActor.run {
+                if let index = self.sessions.firstIndex(where: { $0.id == session.id }) {
+                    self.sessions[index].rating = rating
+                    self.sessions[index].review = review
+                    self.sessions[index].isCompleted = true
+                }
+            }
+        } catch {
+            print("Failed to rate session: \(error)")
+        }
     }
 }
